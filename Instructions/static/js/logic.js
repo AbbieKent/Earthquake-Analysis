@@ -20,15 +20,11 @@ function createmarkers(response){
     // var lat = coordinates[1]
     // console.log(lat)
     // var long= coordinates[0]
-    var myIcon=L.icon({
-      iconSize: [magnitude,magnitude]
-
-    L.marker({icon:myIcon}).addTo(map)
+    
   });
   // return earth_quakes;
 
-  })
-  createMap(L.layerGroup(earth_quakes));
+    createMap(L.layerGroup(earth_quakes));
 };
 
 function createMap(earth_quakes){
