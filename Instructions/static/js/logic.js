@@ -1,61 +1,112 @@
-const url= 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
-d3.json(url).then(createmarkers);
 
-function createmarkers(response){
-  // console.log(Promise)
-  // console.log(response)
-  var EarthQuakeData= response.features;
-  // console.log(EarthQuakeData)
-  earth_quakes=[]
-  EarthQuakeData.forEach(d=>{
-    var coordinates = d.geometry.coordinates;
-    var place = d.properties.place;
-    var magnitude=d.properties.mag
-    // console.log(place)
-    let earth_quake= L.marker([coordinates[1],coordinates[0]])
-    let status = `<h3>${place}<h3></h3> Magnitude: ${magnitude}<h3>`;
-    earth_quake.bindPopup(status);
-    earth_quakes.push(earth_quake)
-    // console.log(coordinates)
-    // var lat = coordinates[1]
-    // console.log(lat)
-    // var long= coordinates[0]
-    
-  });
-  // return earth_quakes;
-
-    createMap(L.layerGroup(earth_quakes));
-};
-
-function createMap(earth_quakes){
-
-var lightmap= L.tileLayer(
-  'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', 
+console.log('step 1 working')
+var graymap = L.tileLayer(
+  "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
   {
-    attribution: 
-      "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+    attribution:
+      "© <a href='https://www.mapbox.com/about/maps/'>Mapbox</a> © <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a> <strong><a href='https://www.mapbox.com/map-feedback/' target='_blank'>Improve this map</a></strong>",
+    tileSize: 512,
     maxZoom: 18,
-    id: 'mapbox/streets-v11',
+    zoomOffset: -1,
+    id: "mapbox/light-v10",
     accessToken: apikey
+  }
+);
+
+
+
+var map= L.map('map',{
+  center: [
+    40.7,-94.5
+  ],
+  zoom: 3
 });
 
- var baseMaps={
-   'Light Map': lightmap
- };
 
- var overlayMaps={
-   'Earthqauke':earth_quakes
- };
 
- var map= L.map('map',{
-   center: [39.8283, -98.5795],
-   zoom: 5,
-   layers: [lightmap, earth_quakes]
- });
- L.control
-  .layers(baseMaps, overlayMaps,{
-    collapsed: false
-  })
-  .addTo(map);
-}
-createmarkers();
+
+graymap.addTo(map);
+
+
+d3.json('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson', function(data){
+  
+  
+  
+  
+  function styleInfo(feature){
+    return {
+      opacity: 1,
+      fillOpacity: 1,
+      fillColor: getColor(feature.geometry.coordinates[2]),
+      color: '#000000',
+      radius: getRadius(feature.properties.mag),
+      stroke: true,
+      weight:0.5
+    }; 
+  }
+  function getColor(depth) {
+    switch (true) {
+    case depth > 90:
+      return "#ea2c2c";
+    case depth > 70:
+      return "#ea822c";
+    case depth > 50:
+      return "#ee9c00";
+    case depth > 30:
+      return "#eecc00";
+    case depth > 10:
+      return "#d4ee00";
+    default:
+      return "#98ee00";
+    }
+  }
+  function getRadius(magnitude){
+    if(magnitude==0){
+      return 1;
+    }
+    return magnitude*4;
+  };
+
+  L.geoJson(data,{
+    pointToLayer: function(feature, latlng){
+      return L.circleMarker(latlng);
+    },
+    style:styleInfo,
+    onEachFeature: function(feature, layer){
+      layer.bindPopup(
+        'Magnitude: '
+          +feature.properties.mag
+          +'<br>Depth: '
+          + feature.geometry.coordinates[2]
+          +'<br>Location: '
+          +feature.properties.place
+      )
+    }
+  }).addTo(map);
+
+
+  var legend= L.control({
+    position: 'bottomright'
+  });
+
+  legend.onAdd= function(){
+    var div = L.DomUtil.create('div','info legend');
+
+    var grades= [-10,10,30,50,70,90];
+    var colors =[
+      "#98ee00",
+      "#d4ee00",
+      "#eecc00",
+      "#ee9c00",
+      "#ea822c",
+      "#ea2c2c"
+    ];
+
+    for (var i=0; i<grades.length; i++){
+      div.innerHTML += "<i style='background: " + colors[i] + "'></i> "
+      + grades[i] + (grades[i + 1] ? "&ndash;" + grades[i + 1] + "<br>" : "+");
+    }
+    return div;
+  };
+  legend.addTo(map);
+});
